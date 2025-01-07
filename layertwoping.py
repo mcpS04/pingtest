@@ -51,7 +51,7 @@ def main():
 
 if __name__ == "__main__":
     if os.geteuid() != 0:
-        print("This script requires root privileges. Run as root or with sudo.\")
+        print("This script requires root privileges. Run as root or with sudo.")
         sys.exit(1)
     else:
         main()
