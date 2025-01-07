@@ -1,5 +1,6 @@
 import sys
 import time
+import os
 from datetime import datetime
 from scapy.all import Ether, sendp, sniff
 
@@ -49,7 +50,12 @@ def main():
         print("Invalid choice.")
 
 if __name__ == "__main__":
-    if not hasattr(sys, 'real_prefix') and not sys.base_prefix != sys.prefix:
-        print("This script requires root privileges. Run as root or with sudo.")
+    if os.geteuid() != 0:
+        print(\"This script requires root privileges. Run as root or with sudo.\")
+        sys.exit(1)
     else:
         main()
+        
+if os.geteuid() != 0:
+    print(\"This script requires root privileges. Run as root or with sudo.\")
+    sys.exit(1)
