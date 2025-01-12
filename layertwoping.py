@@ -71,7 +71,9 @@ def client(target_mac, interface, num_requests=4, timeout=1):
             sent_packets += 1
             
             # Sniff for response packets
+            print("Starting sniffing...")  # Debugging statement
             sniff(iface=interface, prn=process_packet, filter="ether proto 0x9000", timeout=timeout, store=False)
+            print("Sniffing ended.")  # Debugging statement
             time.sleep(1)
         
         print(f"\nSent packets: {sent_packets}")
