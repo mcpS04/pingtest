@@ -6,7 +6,7 @@ import sys
 
 FIXED_PAYLOAD_LENGTH = 64  # Define the fixed payload length
 
-def client(target_mac, interface, num_requests=4, timeout=4):
+def client(target_mac, interface, num_requests=4, timeout=1):
     """Send Ethernet frames using the Ethernet Configuration Testing Protocol (ECTP) to a specific MAC address and print received answers."""
     print(f"Sending ECTP packets to {target_mac} on interface {interface}. Press Ctrl+C to stop.")
     
@@ -15,40 +15,36 @@ def client(target_mac, interface, num_requests=4, timeout=4):
     round_trip_times = []
 
     def process_packet(packet):
-        print("Packet captured")  # Debugging statement
         nonlocal received_responses
-        if Ether in packet:
-            print(f"Ethernet type: {hex(packet.type)}")  # Debugging statement
-            if packet.type == 0x9000:  # Check for ECTP packets
-                print("ECTP packet detected") # Debugging statement
-                # Strip trailing zeros from the payload
-                payload = packet.load.rstrip(b'\x00')
-                # Check if the packet is a response packet
-                if payload[15:] != b"ECTP response":
-                    print("Not a response packet")  # Debugging statement
-                    return
-            
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                src_mac = packet[Ether].src
-            
-                # Extract custom fields from the response
-                loop_skipcnt = payload[0:2]
-                loop_function_0 = payload[2:4]
-                loop_forward_mac = payload[4:11]
-                loop_function_1 = payload[11:13]
-                loop_receipt_num = payload[13:15]
-            
-                rtt = (datetime.now() - start_time).total_seconds()
-                round_trip_times.append(rtt)
-                received_responses += 1
-                print(f"[{timestamp}] ECTP response received from {src_mac} (RTT: {rtt:.4f} seconds)")
-                #print(f"  Loop Skip Count: {int.from_bytes(loop_skipcnt, 'big')}")
-                #print(f"  Loop Function 0: {int.from_bytes(loop_function_0, 'big')}")
-                #print(f"  Loop Forward MAC: {':'.join(f'{b:02x}' for b in loop_forward_mac)}")
-                #print(f"  Loop Function 1: {int.from_bytes(loop_function_1, 'big')}")
-                #print(f"  Loop Receipt Number: {int.from_bytes(loop_receipt_num, 'big')}")
-                #print payload message
-                print(f"  Payload: {payload[15:].decode('utf-8')}")
+        if Ether in packet and packet.type == 0x9000:  # Check for ECTP packets
+            # Strip trailing zeros from the payload
+            payload = packet.load.rstrip(b'\x00')
+            # Check if the packet is a response packet
+            if payload[15:] != b"ECTP response":
+                #print("Not a response packet")  # Debugging statement
+                return
+        
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            src_mac = packet[Ether].src
+        
+            # Extract custom fields from the response
+            loop_skipcnt = payload[0:2]
+            loop_function_0 = payload[2:4]
+            loop_forward_mac = payload[4:11]
+            loop_function_1 = payload[11:13]
+            loop_receipt_num = payload[13:15]
+        
+            rtt = (datetime.now() - start_time).total_seconds()
+            round_trip_times.append(rtt)
+            received_responses += 1
+            print(f"[{timestamp}] ECTP response received from {src_mac} (RTT: {rtt:.4f} seconds)")
+            #print(f"  Loop Skip Count: {int.from_bytes(loop_skipcnt, 'big')}")
+            #print(f"  Loop Function 0: {int.from_bytes(loop_function_0, 'big')}")
+            #print(f"  Loop Forward MAC: {':'.join(f'{b:02x}' for b in loop_forward_mac)}")
+            #print(f"  Loop Function 1: {int.from_bytes(loop_function_1, 'big')}")
+            #print(f"  Loop Receipt Number: {int.from_bytes(loop_receipt_num, 'big')}")
+            #print payload message
+            print(f"  Payload: {payload[15:].decode('utf-8')}")
 
     try:
         for _ in range(num_requests):
@@ -74,9 +70,7 @@ def client(target_mac, interface, num_requests=4, timeout=4):
             sent_packets += 1
             
             # Sniff for response packets
-            print("Starting sniffing...")  # Debugging statement
             sniff(iface=interface, prn=process_packet, filter="ether proto 0x9000", timeout=timeout, store=False)
-            print("Sniffing ended.")  # Debugging statement
             time.sleep(1)
         
         print(f"\nSent packets: {sent_packets}")
@@ -124,7 +118,7 @@ def server(interface):
             # Pad the payload to the fixed length
             response_payload = response_payload.ljust(FIXED_PAYLOAD_LENGTH, b'\x00')
             response_packet = Ether(dst=src_mac, src=get_if_hwaddr(interface), type=0x9000) / response_payload
-            time.sleep(0.5) # Delay the response for debugging purposes
+            time.sleep(0.05) # Delay the response for debugging purposes
             sendp(response_packet, iface=interface, verbose=False)
             print(f"Response sent to {src_mac}")
 
