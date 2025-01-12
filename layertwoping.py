@@ -15,8 +15,10 @@ def client(target_mac, interface, num_requests=4, timeout=1):
     round_trip_times = []
 
     def process_packet(packet):
+        print("Packet captured")  # Debugging statement
         nonlocal received_responses
         if Ether in packet and packet.type == 0x9000:  # Check for ECTP packets
+            print("ECTP packet detected") # Debugging statement
             # Strip trailing zeros from the payload
             payload = packet.load.rstrip(b'\x00')
             # Check if the packet is a response packet
@@ -37,11 +39,11 @@ def client(target_mac, interface, num_requests=4, timeout=1):
             round_trip_times.append(rtt)
             received_responses += 1
             print(f"[{timestamp}] ECTP response received from {src_mac} (RTT: {rtt:.4f} seconds)")
-            print(f"  Loop Skip Count: {int.from_bytes(loop_skipcnt, 'big')}")
-            print(f"  Loop Function 0: {int.from_bytes(loop_function_0, 'big')}")
-            print(f"  Loop Forward MAC: {':'.join(f'{b:02x}' for b in loop_forward_mac)}")
-            print(f"  Loop Function 1: {int.from_bytes(loop_function_1, 'big')}")
-            print(f"  Loop Receipt Number: {int.from_bytes(loop_receipt_num, 'big')}")
+            #print(f"  Loop Skip Count: {int.from_bytes(loop_skipcnt, 'big')}")
+            #print(f"  Loop Function 0: {int.from_bytes(loop_function_0, 'big')}")
+            #print(f"  Loop Forward MAC: {':'.join(f'{b:02x}' for b in loop_forward_mac)}")
+            #print(f"  Loop Function 1: {int.from_bytes(loop_function_1, 'big')}")
+            #print(f"  Loop Receipt Number: {int.from_bytes(loop_receipt_num, 'big')}")
             #print payload message
             print(f"  Payload: {payload[15:].decode('utf-8')}")
 
