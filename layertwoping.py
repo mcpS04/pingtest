@@ -16,7 +16,7 @@ def client(target_mac, interface, num_requests=4, timeout=1):
         nonlocal received_responses
         if Ether in packet and packet.type == 0x9000:  # Check for ECTP packets
             # Check if the packet is a response packet
-            if b"ECTP response" not in packet.load:
+            if packet.load[-12:] != b"ECTP response":
                 return
             
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -88,7 +88,7 @@ def server(interface):
             loop_receipt_num = packet.load[13:15]
             
             # Check if the packet is a response packet to avoid infinite loop
-            if packet.load[-12:] == b"ECTP response":
+            if packet.load[-12:] != b"ECTP ping":
                 return
             
             print(f"[{timestamp}] ECTP packet received from {src_mac}")
