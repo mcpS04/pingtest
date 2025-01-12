@@ -2,14 +2,15 @@ import sys
 import time
 import os
 from datetime import datetime
-from scapy.all import Ether, sendp, sniff,  get_if_list, get_if_hwaddr
+from scapy.all import Ether, sendp, sniff, get_if_list, get_if_hwaddr
 
 def sender(target_mac, interface):
-    """Send Ethernet frames to a specific MAC address."""
-    print(f"Sending packets to {target_mac} on interface {interface}. Press Ctrl+C to stop.")
+    """Send Ethernet frames using the Ethernet Configuration Testing Protocol (ECTP) to a specific MAC address."""
+    print(f"Sending ECTP packets to {target_mac} on interface {interface}. Press Ctrl+C to stop.")
     try:
         while True:
-            packet = Ether(dst=target_mac, src=get_if_hwaddr(interface)) / b"Ethernet ping"
+            # Construct an ECTP packet
+            packet = Ether(dst=target_mac, src=get_if_hwaddr(interface), type=0x9000) / b"ECTP ping"
             sendp(packet, iface=interface, verbose=False)
             time.sleep(1)
     except KeyboardInterrupt:
@@ -20,9 +21,9 @@ def receiver(interface):
     print(f"Listening for packets on interface {interface}. Press Ctrl+C to stop.")
     try:
         def process_packet(packet):
-            if Ether in packet:
+            if Ether in packet and packet.type == 0x9000:  # Check for ECTP packets
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                print(f"[{timestamp}] Packet received from {packet[Ether].src}")
+                print(f"[{timestamp}] ECTP packet received from {packet[Ether].src}")
 
         sniff(iface=interface, prn=process_packet, store=False)
     except KeyboardInterrupt:
@@ -41,12 +42,6 @@ def choose_interface():
     else:
         print("Invalid choice.")
         sys.exit(1)
-
-#def get_mac():
-    #"""Retrieve the MAC address of the first interface."""
-    #from uuid import getnode
-    #mac = getnode()
-    #return ":".join(f"{(mac >> i) & 0xff:02x}" for i in range(40, -8, -8))
 
 def main():
     print("Select mode:")
@@ -71,4 +66,3 @@ if __name__ == "__main__":
         sys.exit(1)
     else:
         main()
-
