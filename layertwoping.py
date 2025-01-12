@@ -88,7 +88,7 @@ def server(interface):
             loop_receipt_num = packet.load[13:15]
             
             # Check if the packet is a response packet to avoid infinite loop
-            if b"ECTP response" in packet.load:
+            if packet.load[-12:] == b"ECTP response":
                 return
             
             print(f"[{timestamp}] ECTP packet received from {src_mac}")
