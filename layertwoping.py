@@ -5,25 +5,41 @@ from datetime import datetime
 from scapy.all import Ether, sendp, sniff, get_if_list, get_if_hwaddr
 
 def sender(target_mac, interface):
-    """Send Ethernet frames using the Ethernet Configuration Testing Protocol (ECTP) to a specific MAC address."""
+    """Send Ethernet frames using the Ethernet Configuration Testing Protocol (ECTP) to a specific MAC address and print received answers."""
     print(f"Sending ECTP packets to {target_mac} on interface {interface}. Press Ctrl+C to stop.")
+    
+    def process_packet(packet):
+        if Ether in packet and packet.type == 0x9000:  # Check for ECTP packets
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            src_mac = packet[Ether].src
+            print(f"[{timestamp}] ECTP response received from {src_mac}")
+
     try:
         while True:
             # Construct an ECTP packet
             packet = Ether(dst=target_mac, src=get_if_hwaddr(interface), type=0x9000) / b"ECTP ping"
             sendp(packet, iface=interface, verbose=False)
             time.sleep(1)
+            
+            # Sniff for response packets
+            sniff(iface=interface, prn=process_packet, filter="ether proto 0x9000", timeout=1, store=False)
     except KeyboardInterrupt:
         print("\nStopping sender.")
 
 def receiver(interface):
-    """Listen for incoming Ethernet frames on a specified interface and display source MAC and timestamp."""
+    """Listen for incoming Ethernet frames on a specified interface and send a response frame to the source."""
     print(f"Listening for packets on interface {interface}. Press Ctrl+C to stop.")
     try:
         def process_packet(packet):
             if Ether in packet and packet.type == 0x9000:  # Check for ECTP packets
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                print(f"[{timestamp}] ECTP packet received from {packet[Ether].src}")
+                src_mac = packet[Ether].src
+                print(f"[{timestamp}] ECTP packet received from {src_mac}")
+
+                # Construct and send a response packet
+                response_packet = Ether(dst=src_mac, src=get_if_hwaddr(interface), type=0x9000) / b"ECTP response"
+                sendp(response_packet, iface=interface, verbose=False)
+                #print(f"Response sent to {src_mac}")
 
         sniff(iface=interface, prn=process_packet, store=False)
     except KeyboardInterrupt:
