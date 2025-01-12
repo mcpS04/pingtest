@@ -4,6 +4,8 @@ import time
 import os
 import sys
 
+FIXED_PAYLOAD_LENGTH = 64  # Define the fixed payload length
+
 def client(target_mac, interface, num_requests=4, timeout=1):
     """Send Ethernet frames using the Ethernet Configuration Testing Protocol (ECTP) to a specific MAC address and print received answers."""
     print(f"Sending ECTP packets to {target_mac} on interface {interface}. Press Ctrl+C to stop.")
@@ -18,28 +20,28 @@ def client(target_mac, interface, num_requests=4, timeout=1):
             # Strip trailing zeros from the payload
             payload = packet.load.rstrip(b'\x00')
             # Check if the packet is a response packet
-            if payload[-12:] != b"ECTP response":
+            if payload[15:] != b"ECTP response":
                 return
             
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             src_mac = packet[Ether].src
             
             # Extract custom fields from the response
-            loop_skipcnt = packet.load[0:2]
-            loop_function_0 = packet.load[2:4]
-            loop_forward_mac = packet.load[4:11]
-            loop_function_1 = packet.load[11:13]
-            loop_receipt_num = packet.load[13:15]
+            loop_skipcnt = payload[0:2]
+            loop_function_0 = payload[2:4]
+            loop_forward_mac = payload[4:11]
+            loop_function_1 = payload[11:13]
+            loop_receipt_num = payload[13:15]
             
             rtt = (datetime.now() - start_time).total_seconds()
             round_trip_times.append(rtt)
             received_responses += 1
             print(f"[{timestamp}] ECTP response received from {src_mac} (RTT: {rtt:.4f} seconds)")
-            #print(f"  Loop Skip Count: {int.from_bytes(loop_skipcnt, 'big')}")
-            #print(f"  Loop Function 0: {int.from_bytes(loop_function_0, 'big')}")
-            #print(f"  Loop Forward MAC: {':'.join(f'{b:02x}' for b in loop_forward_mac)}")
-            #print(f"  Loop Function 1: {int.from_bytes(loop_function_1, 'big')}")
-            #print(f"  Loop Receipt Number: {int.from_bytes(loop_receipt_num, 'big')}")
+            print(f"  Loop Skip Count: {int.from_bytes(loop_skipcnt, 'big')}")
+            print(f"  Loop Function 0: {int.from_bytes(loop_function_0, 'big')}")
+            print(f"  Loop Forward MAC: {':'.join(f'{b:02x}' for b in loop_forward_mac)}")
+            print(f"  Loop Function 1: {int.from_bytes(loop_function_1, 'big')}")
+            print(f"  Loop Receipt Number: {int.from_bytes(loop_receipt_num, 'big')}")
 
     try:
         for _ in range(num_requests):
@@ -51,13 +53,15 @@ def client(target_mac, interface, num_requests=4, timeout=1):
             loop_receipt_num = b'\x00\x04'  # Receipt number
 
             # Construct an ECTP packet with custom fields
-            packet = (Ether(dst=target_mac, src=get_if_hwaddr(interface), type=0x9000) /
-                      loop_skipcnt /
-                      loop_function_0 /
-                      loop_forward_mac /
-                      loop_function_1 /
-                      loop_receipt_num /
-                      b"ECTP ping")
+            payload = (loop_skipcnt +
+                       loop_function_0 +
+                       loop_forward_mac +
+                       loop_function_1 +
+                       loop_receipt_num +
+                       b"ECTP ping")
+            # Pad the payload to the fixed length
+            payload = payload.ljust(FIXED_PAYLOAD_LENGTH, b'\x00')
+            packet = Ether(dst=target_mac, src=get_if_hwaddr(interface), type=0x9000) / payload
             start_time = datetime.now()
             sendp(packet, iface=interface, verbose=False)
             sent_packets += 1
@@ -83,33 +87,34 @@ def server(interface):
             src_mac = packet[Ether].src
             
             # Extract custom fields
-            loop_skipcnt = packet.load[0:2]
-            loop_function_0 = packet.load[2:4]
-            loop_forward_mac = packet.load[4:11]
-            loop_function_1 = packet.load[11:13]
-            loop_receipt_num = packet.load[13:15]
-            
-            # Strip trailing zeros from the payload
             payload = packet.load.rstrip(b'\x00')
+            loop_skipcnt = payload[0:2]
+            loop_function_0 = payload[2:4]
+            loop_forward_mac = payload[4:11]
+            loop_function_1 = payload[11:13]
+            loop_receipt_num = payload[13:15]
+            
             # Check if the packet is a response packet to avoid infinite loop
-            if payload[-8:] != b"ECTP ping":
+            if payload[15:] != b"ECTP ping":
                 return
             
             print(f"[{timestamp}] ECTP packet received from {src_mac}")
-            #print(f"  Loop Skip Count: {int.from_bytes(loop_skipcnt, 'big')}")
-            #print(f"  Loop Function 0: {int.from_bytes(loop_function_0, 'big')}")
-            #print(f"  Loop Forward MAC: {':'.join(f'{b:02x}' for b in loop_forward_mac)}")
-            #print(f"  Loop Function 1: {int.from_bytes(loop_function_1, 'big')}")
-            #print(f"  Loop Receipt Number: {int.from_bytes(loop_receipt_num, 'big')}")
+            print(f"  Loop Skip Count: {int.from_bytes(loop_skipcnt, 'big')}")
+            print(f"  Loop Function 0: {int.from_bytes(loop_function_0, 'big')}")
+            print(f"  Loop Forward MAC: {':'.join(f'{b:02x}' for b in loop_forward_mac)}")
+            print(f"  Loop Function 1: {int.from_bytes(loop_function_1, 'big')}")
+            print(f"  Loop Receipt Number: {int.from_bytes(loop_receipt_num, 'big')}")
             
             # Construct and send a response packet
-            response_packet = (Ether(dst=src_mac, src=get_if_hwaddr(interface), type=0x9000) /
-                               loop_skipcnt /
-                               loop_function_0 /
-                               loop_forward_mac /
-                               loop_function_1 /
-                               loop_receipt_num /
-                               b"ECTP response")
+            response_payload = (loop_skipcnt +
+                                loop_function_0 +
+                                loop_forward_mac +
+                                loop_function_1 +
+                                loop_receipt_num +
+                                b"ECTP response")
+            # Pad the payload to the fixed length
+            response_payload = response_payload.ljust(FIXED_PAYLOAD_LENGTH, b'\x00')
+            response_packet = Ether(dst=src_mac, src=get_if_hwaddr(interface), type=0x9000) / response_payload
             sendp(response_packet, iface=interface, verbose=False)
             print(f"Response sent to {src_mac}")
 
