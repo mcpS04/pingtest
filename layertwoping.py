@@ -16,6 +16,7 @@ def client(target_mac, interface, num_requests=4, timeout=1):
 
     def process_packet(packet):
         print("Packet captured")  # Debugging statement
+        print(packet.type)  # Debugging statement
         nonlocal received_responses
         if Ether in packet and packet.type == 0x9000:  # Check for ECTP packets
             print("ECTP packet detected") # Debugging statement
