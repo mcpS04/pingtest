@@ -20,8 +20,8 @@ def client(target_mac, interface, num_requests=4, timeout=1):
             # Strip trailing zeros from the payload
             payload = packet.load.rstrip(b'\x00')
             # Check if the packet is a response packet
-            if payload[15:] != b"ECTP response":
-                return
+            #if payload[15:] != b"ECTP response":
+                #return
             
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             src_mac = packet[Ether].src
@@ -42,6 +42,8 @@ def client(target_mac, interface, num_requests=4, timeout=1):
             print(f"  Loop Forward MAC: {':'.join(f'{b:02x}' for b in loop_forward_mac)}")
             print(f"  Loop Function 1: {int.from_bytes(loop_function_1, 'big')}")
             print(f"  Loop Receipt Number: {int.from_bytes(loop_receipt_num, 'big')}")
+            #print payload message
+            print(f"  Payload: {payload[15:].decode('utf-8')}")
 
     try:
         for _ in range(num_requests):
