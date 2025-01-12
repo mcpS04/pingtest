@@ -75,7 +75,7 @@ def client(target_mac, interface, num_requests=4, timeout=4):
             
             # Sniff for response packets
             print("Starting sniffing...")  # Debugging statement
-            sniff(iface=interface, prn=process_packet, filter="ether proto 0x9000", store=False)
+            sniff(iface=interface, prn=process_packet, filter="ether proto 0x9000", timeout=timeout, store=False)
             print("Sniffing ended.")  # Debugging statement
             time.sleep(1)
         
@@ -124,6 +124,7 @@ def server(interface):
             # Pad the payload to the fixed length
             response_payload = response_payload.ljust(FIXED_PAYLOAD_LENGTH, b'\x00')
             response_packet = Ether(dst=src_mac, src=get_if_hwaddr(interface), type=0x9000) / response_payload
+            time.sleep(0.5) # Delay the response for debugging purposes
             sendp(response_packet, iface=interface, verbose=False)
             print(f"Response sent to {src_mac}")
 
