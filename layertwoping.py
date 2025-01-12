@@ -22,8 +22,9 @@ def client(target_mac, interface, num_requests=4, timeout=1):
             # Strip trailing zeros from the payload
             payload = packet.load.rstrip(b'\x00')
             # Check if the packet is a response packet
-            #if payload[15:] != b"ECTP response":
-                #return
+            if payload[15:] != b"ECTP response":
+                print("Not a response packet")  # Debugging statement
+                return
             
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             src_mac = packet[Ether].src
@@ -72,7 +73,7 @@ def client(target_mac, interface, num_requests=4, timeout=1):
             
             # Sniff for response packets
             print("Starting sniffing...")  # Debugging statement
-            sniff(iface=interface, prn=process_packet, filter="ether proto 0x9000", timeout=timeout, store=False)
+            sniff(iface=interface, prn=process_packet, timeout=timeout, store=False)
             print("Sniffing ended.")  # Debugging statement
             time.sleep(1)
         
