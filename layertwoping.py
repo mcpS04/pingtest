@@ -6,7 +6,7 @@ import sys
 
 FIXED_PAYLOAD_LENGTH = 64  # Define the fixed payload length
 
-def client(target_mac, interface, num_requests=4, timeout=10):
+def client(target_mac, interface, num_requests=4, timeout=4):
     """Send Ethernet frames using the Ethernet Configuration Testing Protocol (ECTP) to a specific MAC address and print received answers."""
     print(f"Sending ECTP packets to {target_mac} on interface {interface}. Press Ctrl+C to stop.")
     
@@ -75,7 +75,7 @@ def client(target_mac, interface, num_requests=4, timeout=10):
             
             # Sniff for response packets
             print("Starting sniffing...")  # Debugging statement
-            sniff(iface=interface, prn=process_packet, timeout=timeout, store=False)
+            sniff(iface=interface, prn=process_packet, filter="ether proto 0x9000", store=False)
             print("Sniffing ended.")  # Debugging statement
             time.sleep(1)
         
