@@ -1,49 +1,110 @@
-import sys
+from scapy.all import Ether, sendp, sniff, get_if_hwaddr, get_if_list
+from datetime import datetime
 import time
 import os
-from datetime import datetime
-from scapy.all import Ether, sendp, sniff, get_if_list, get_if_hwaddr
+import sys
 
-def sender(target_mac, interface):
+def client(target_mac, interface, num_requests=4, timeout=1):
     """Send Ethernet frames using the Ethernet Configuration Testing Protocol (ECTP) to a specific MAC address and print received answers."""
     print(f"Sending ECTP packets to {target_mac} on interface {interface}. Press Ctrl+C to stop.")
+    
+    sent_packets = 0
+    received_responses = 0
+    round_trip_times = []
+
+    def process_packet(packet):
+        nonlocal received_responses
+        if Ether in packet and packet.type == 0x9000:  # Check for ECTP packets
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            src_mac = packet[Ether].src
+            
+            # Extract custom fields from the response
+            loop_skipcnt = packet.load[0:2]
+            loop_function_0 = packet.load[2:4]
+            loop_forward_mac = packet.load[4:11]
+            loop_function_1 = packet.load[11:13]
+            loop_receipt_num = packet.load[13:15]
+            
+            rtt = (datetime.now() - start_time).total_seconds()
+            round_trip_times.append(rtt)
+            received_responses += 1
+            print(f"[{timestamp}] ECTP response received from {src_mac} (RTT: {rtt:.4f} seconds)")
+            print(f"  Loop Skip Count: {int.from_bytes(loop_skipcnt, 'big')}")
+            print(f"  Loop Function 0: {int.from_bytes(loop_function_0, 'big')}")
+            print(f"  Loop Forward MAC: {':'.join(f'{b:02x}' for b in loop_forward_mac)}")
+            print(f"  Loop Function 1: {int.from_bytes(loop_function_1, 'big')}")
+            print(f"  Loop Receipt Number: {int.from_bytes(loop_receipt_num, 'big')}")
+
+    try:
+        for _ in range(num_requests):
+            # Define custom fields
+            loop_skipcnt = b'\x00\x01'  # Skip count
+            loop_function_0 = b'\x00\x02'  # Function 0
+            loop_forward_mac = b'\x00\x11\x22\x33\x44\x55\x66'  # Forward MAC address
+            loop_function_1 = b'\x00\x03'  # Function 1
+            loop_receipt_num = b'\x00\x04'  # Receipt number
+
+            # Construct an ECTP packet with custom fields
+            packet = (Ether(dst=target_mac, src=get_if_hwaddr(interface), type=0x9000) /
+                      loop_skipcnt /
+                      loop_function_0 /
+                      loop_forward_mac /
+                      loop_function_1 /
+                      loop_receipt_num /
+                      b"ECTP ping")
+            start_time = datetime.now()
+            sendp(packet, iface=interface, verbose=False)
+            sent_packets += 1
+            
+            # Sniff for response packets
+            sniff(iface=interface, prn=process_packet, filter="ether proto 0x9000", timeout=timeout, store=False)
+            time.sleep(1)
+        
+        print(f"\nSent packets: {sent_packets}")
+        print(f"Received responses: {received_responses}")
+        if round_trip_times:
+            print(f"Average RTT: {sum(round_trip_times) / len(round_trip_times):.4f} seconds")
+    except KeyboardInterrupt:
+        print("\nStopping client.")
+
+def server(interface):
+    """Listen for incoming Ethernet frames on a specified interface and send a response frame to the source."""
+    print(f"Listening for packets on interface {interface}. Press Ctrl+C to stop.")
     
     def process_packet(packet):
         if Ether in packet and packet.type == 0x9000:  # Check for ECTP packets
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             src_mac = packet[Ether].src
-            print(f"[{timestamp}] ECTP response received from {src_mac}")
-
-    try:
-        while True:
-            # Construct an ECTP packet
-            packet = Ether(dst=target_mac, src=get_if_hwaddr(interface), type=0x9000) / b"ECTP ping"
-            sendp(packet, iface=interface, verbose=False)
-            time.sleep(1)
             
-            # Sniff for response packets
-            sniff(iface=interface, prn=process_packet, filter="ether proto 0x9000", timeout=1, store=False)
-    except KeyboardInterrupt:
-        print("\nStopping sender.")
+            # Extract custom fields
+            loop_skipcnt = packet.load[0:2]
+            loop_function_0 = packet.load[2:4]
+            loop_forward_mac = packet.load[4:11]
+            loop_function_1 = packet.load[11:13]
+            loop_receipt_num = packet.load[13:15]
+            
+            print(f"[{timestamp}] ECTP packet received from {src_mac}")
+            print(f"  Loop Skip Count: {int.from_bytes(loop_skipcnt, 'big')}")
+            print(f"  Loop Function 0: {int.from_bytes(loop_function_0, 'big')}")
+            print(f"  Loop Forward MAC: {':'.join(f'{b:02x}' for b in loop_forward_mac)}")
+            print(f"  Loop Function 1: {int.from_bytes(loop_function_1, 'big')}")
+            print(f"  Loop Receipt Number: {int.from_bytes(loop_receipt_num, 'big')}")
+            
+            # Construct and send a response packet
+            response_packet = (Ether(dst=src_mac, src=get_if_hwaddr(interface), type=0x9000) /
+                               loop_skipcnt /
+                               loop_function_0 /
+                               loop_forward_mac /
+                               loop_function_1 /
+                               loop_receipt_num /
+                               b"ECTP response")
+            sendp(response_packet, iface=interface, verbose=False)
+            print(f"Response sent to {src_mac}")
 
-def receiver(interface):
-    """Listen for incoming Ethernet frames on a specified interface and send a response frame to the source."""
-    print(f"Listening for packets on interface {interface}. Press Ctrl+C to stop.")
     try:
-        def process_packet(packet):
-            if Ether in packet and packet.type == 0x9000:  # Check for ECTP packets
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                src_mac = packet[Ether].src
-                print(f"[{timestamp}] ECTP packet received from {src_mac}")
-
-                # Construct and send a response packet
-                response_packet = Ether(dst=src_mac, src=get_if_hwaddr(interface), type=0x9000) / b"ECTP response"
-                sendp(response_packet, iface=interface, verbose=False)
-                #print(f"Response sent to {src_mac}")
-
-        sniff(iface=interface, prn=process_packet, store=False)
+        sniff(iface=interface, prn=process_packet, filter="ether proto 0x9000", store=False)
     except KeyboardInterrupt:
-        print("\nStopping receiver.")
+        print("\nStopping server.")
 
 def choose_interface():
     """Prompt the user to choose an Ethernet interface."""
@@ -61,8 +122,8 @@ def choose_interface():
 
 def main():
     print("Select mode:")
-    print("1. Sending mode")
-    print("2. Receiving mode")
+    print("1. Client mode")
+    print("2. Server mode")
 
     choice = input("Enter choice (1/2): ").strip()
 
@@ -70,9 +131,9 @@ def main():
 
     if choice == "1":
         target_mac = input("Enter target MAC address (e.g., 00:11:22:33:44:55): ").strip()
-        sender(target_mac, interface)
+        client(target_mac, interface)
     elif choice == "2":
-        receiver(interface)
+        server(interface)
     else:
         print("Invalid choice.")
 
