@@ -5,6 +5,7 @@ import os
 import sys
 
 FIXED_PAYLOAD_LENGTH = 64  # Define the fixed payload length
+RESPONSE_DELAY = 0.05  # Define the response delay in seconds
 
 def client(target_mac, interface, num_requests=4, timeout=1):
     """Send Ethernet frames using the Ethernet Configuration Testing Protocol (ECTP) to a specific MAC address and print received answers."""
@@ -21,7 +22,6 @@ def client(target_mac, interface, num_requests=4, timeout=1):
             payload = packet.load.rstrip(b'\x00')
             # Check if the packet is a response packet
             if payload[15:] != b"ECTP response":
-                #print("Not a response packet")  # Debugging statement
                 return
         
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -34,7 +34,7 @@ def client(target_mac, interface, num_requests=4, timeout=1):
             loop_function_1 = payload[11:13]
             loop_receipt_num = payload[13:15]
         
-            rtt = (datetime.now() - start_time).total_seconds()
+            rtt = (datetime.now() - start_time).total_seconds() - RESPONSE_DELAY
             round_trip_times.append(rtt)
             received_responses += 1
             print(f"[{timestamp}] ECTP response received from {src_mac} (RTT: {rtt:.4f} seconds)")
@@ -102,11 +102,11 @@ def server(interface):
                 return
             
             print(f"[{timestamp}] ECTP packet received from {src_mac}")
-            print(f"  Loop Skip Count: {int.from_bytes(loop_skipcnt, 'big')}")
-            print(f"  Loop Function 0: {int.from_bytes(loop_function_0, 'big')}")
-            print(f"  Loop Forward MAC: {':'.join(f'{b:02x}' for b in loop_forward_mac)}")
-            print(f"  Loop Function 1: {int.from_bytes(loop_function_1, 'big')}")
-            print(f"  Loop Receipt Number: {int.from_bytes(loop_receipt_num, 'big')}")
+            #print(f"  Loop Skip Count: {int.from_bytes(loop_skipcnt, 'big')}")
+            #print(f"  Loop Function 0: {int.from_bytes(loop_function_0, 'big')}")
+            #print(f"  Loop Forward MAC: {':'.join(f'{b:02x}' for b in loop_forward_mac)}")
+            #print(f"  Loop Function 1: {int.from_bytes(loop_function_1, 'big')}")
+            #print(f"  Loop Receipt Number: {int.from_bytes(loop_receipt_num, 'big')}")
             
             # Construct and send a response packet
             response_payload = (loop_skipcnt +
@@ -118,7 +118,7 @@ def server(interface):
             # Pad the payload to the fixed length
             response_payload = response_payload.ljust(FIXED_PAYLOAD_LENGTH, b'\x00')
             response_packet = Ether(dst=src_mac, src=get_if_hwaddr(interface), type=0x9000) / response_payload
-            time.sleep(0.05) # Delay the response for debugging purposes
+            time.sleep(RESPONSE_DELAY)  # Delay the response for debugging purposes
             sendp(response_packet, iface=interface, verbose=False)
             print(f"Response sent to {src_mac}")
 
