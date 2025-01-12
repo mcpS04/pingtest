@@ -6,7 +6,7 @@ import sys
 
 FIXED_PAYLOAD_LENGTH = 64  # Define the fixed payload length
 
-def client(target_mac, interface, num_requests=4, timeout=1):
+def client(target_mac, interface, num_requests=4, timeout=10):
     """Send Ethernet frames using the Ethernet Configuration Testing Protocol (ECTP) to a specific MAC address and print received answers."""
     print(f"Sending ECTP packets to {target_mac} on interface {interface}. Press Ctrl+C to stop.")
     
