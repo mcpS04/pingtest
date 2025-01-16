@@ -11,13 +11,9 @@
     ```
 
 2. **Install the required dependencies:**
-    ```sh
-    pip install -r requirements.txt
-    ```
-
     Ensure that `scapy` is installed. If not, you can install it using:
     ```sh
-    pip install scapy
+    apt install scapy
     ```
 
 3. **Run the script with root privileges:**
