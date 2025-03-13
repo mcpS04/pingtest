@@ -4,7 +4,7 @@ import time
 import os
 import sys
 
-FIXED_PAYLOAD_LENGTH = 64  # Define the fixed payload length
+FIXED_PAYLOAD_LENGTH = 50  # Define the fixed payload length
 RESPONSE_DELAY = 0.05  # Define the response delay in seconds
 
 def client(target_mac, interface, num_requests=4, timeout=1):
@@ -49,11 +49,11 @@ def client(target_mac, interface, num_requests=4, timeout=1):
     try:
         for _ in range(num_requests):
             # Define custom fields
-            loop_skipcnt = b'\x00\x01'  # Skip count
-            loop_function_0 = b'\x00\x02'  # Function 0
+            loop_skipcnt = b'\x00\x00'  # Skip count
+            loop_function_0 = b'\x02\x00'  # Function 0
             loop_forward_mac = b'\x00\x11\x22\x33\x44\x55\x66'  # Forward MAC address
-            loop_function_1 = b'\x00\x03'  # Function 1
-            loop_receipt_num = b'\x00\x04'  # Receipt number
+            loop_function_1 = b'\x00\x00'  # Function 1
+            loop_receipt_num = b'\x00\x00'  # Receipt number
 
             # Construct an ECTP packet with custom fields
             payload = (loop_skipcnt +
@@ -109,6 +109,11 @@ def server(interface):
             #print(f"  Loop Receipt Number: {int.from_bytes(loop_receipt_num, 'big')}")
             
             # Construct and send a response packet
+            loop_skipcnt = b'\x01\x00'  # Skip count
+            loop_function_0 = b'\x01\x00'  # Function 0
+            loop_forward_mac = b'\x00\x11\x22\x33\x44\x55\x66'  # Forward MAC address
+            loop_function_1 = b'\x00\x00'  # Function 1
+            loop_receipt_num = b'\x00\x00'  # Receipt number
             response_payload = (loop_skipcnt +
                                 loop_function_0 +
                                 loop_forward_mac +
