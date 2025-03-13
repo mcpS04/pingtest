@@ -3,6 +3,7 @@ from datetime import datetime
 import time
 import os
 import sys
+import argparse  # Add argparse for argument parsing
 
 FIXED_PAYLOAD_LENGTH = 50  # Define the fixed payload length
 RESPONSE_DELAY = 0.05  # Define the response delay in seconds
@@ -147,21 +148,24 @@ def choose_interface():
         sys.exit(1)
 
 def main():
-    print("Select mode:")
-    print("1. Client mode")
-    print("2. Server mode")
+    parser = argparse.ArgumentParser(description="Ethernet Configuration Testing Protocol (ECTP) tool")
+    parser.add_argument('-s', '--server', action='store_true', help="Start in server mode")
+    parser.add_argument('-c', '--client', metavar='TARGET_MAC', help="Start in client mode and specify target MAC address")
+    parser.add_argument('-n', '--num_requests', type=int, default=4, help="Number of requests to send in client mode (default: 4)")
+    parser.add_argument('-w', '--timeout', type=int, default=1, help="Timeout between requests in client mode (default: 1 second)")
+    
+    args = parser.parse_args()
 
-    choice = input("Enter choice (1/2): ").strip()
+    if not args.server and not args.client:
+        parser.print_help()
+        sys.exit(1)
 
     interface = choose_interface()
 
-    if choice == "1":
-        target_mac = input("Enter target MAC address (e.g., 00:11:22:33:44:55): ").strip()
-        client(target_mac, interface)
-    elif choice == "2":
+    if args.server:
         server(interface)
-    else:
-        print("Invalid choice.")
+    elif args.client:
+        client(args.client, interface, num_requests=args.num_requests, timeout=args.timeout)
 
 if __name__ == "__main__":
     if os.geteuid() != 0:
