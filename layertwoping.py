@@ -54,14 +54,14 @@ def client(target_mac, interface, num_requests=4, timeout=1):
             loop_function_0 = b'\x02\x00'  # Function 0
             loop_forward_mac = b'\x00\x11\x22\x33\x44\x55'  # Forward MAC address
             loop_function_1 = b'\x00\x00'  # Function 1
-            loop_receipt_num = b'\x00\x00'  # Receipt number
+            #loop_receipt_num = b'\x00\x00'  # Receipt number
 
             # Construct an ECTP packet with custom fields
             payload = (loop_skipcnt +
                        loop_function_0 +
                        loop_forward_mac +
                        loop_function_1 +
-                       loop_receipt_num +
+                       #loop_receipt_num +
                        b"ECTP ping")
             # Pad the payload to the fixed length
             payload = payload.ljust(FIXED_PAYLOAD_LENGTH, b'\x00')
@@ -96,7 +96,7 @@ def server(interface):
             loop_function_0 = payload[2:4]
             loop_forward_mac = payload[4:11]
             loop_function_1 = payload[11:13]
-            loop_receipt_num = payload[13:15]
+            #loop_receipt_num = payload[13:15]
             
             # Check if the packet is a response packet to avoid infinite loop
             if payload[15:] != b"ECTP ping":
@@ -112,13 +112,13 @@ def server(interface):
             # Construct and send a response packet
             loop_skipcnt = b'\x01\x00'  # Skip count
             loop_function_0 = b'\x01\x00'  # Function 0
-            loop_forward_mac = b'\x00\x11\x22\x33\x44\x55'  # Forward MAC address
-            loop_function_1 = b'\x00\x00'  # Function 1
-            loop_receipt_num = b'\x00\x00'  # Receipt number
+            #loop_forward_mac = b'\x00\x01\x22\x33\x44\x55'  # Forward MAC address
+            #loop_function_1 = b'\x00\x00'  # Function 1
+            loop_receipt_num = b'\x01\x00'  # Receipt number
             response_payload = (loop_skipcnt +
                                 loop_function_0 +
-                                loop_forward_mac +
-                                loop_function_1 +
+                                #loop_forward_mac +
+                                #loop_function_1 +
                                 loop_receipt_num +
                                 b"ECTP response")
             # Pad the payload to the fixed length
