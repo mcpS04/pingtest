@@ -52,7 +52,7 @@ def client(target_mac, interface, num_requests=4, timeout=1):
             # Define custom fields
             loop_skipcnt = b'\x00\x00'  # Skip count
             loop_function_0 = b'\x02\x00'  # Function 0
-            loop_forward_mac = b'\x00\x11\x22\x33\x44\x55\x66'  # Forward MAC address
+            loop_forward_mac = b'\x00\x11\x22\x33\x44\x55'  # Forward MAC address
             loop_function_1 = b'\x00\x00'  # Function 1
             loop_receipt_num = b'\x00\x00'  # Receipt number
 
@@ -112,7 +112,7 @@ def server(interface):
             # Construct and send a response packet
             loop_skipcnt = b'\x01\x00'  # Skip count
             loop_function_0 = b'\x01\x00'  # Function 0
-            loop_forward_mac = b'\x00\x11\x22\x33\x44\x55\x66'  # Forward MAC address
+            loop_forward_mac = b'\x00\x11\x22\x33\x44\x55'  # Forward MAC address
             loop_function_1 = b'\x00\x00'  # Function 1
             loop_receipt_num = b'\x00\x00'  # Receipt number
             response_payload = (loop_skipcnt +
