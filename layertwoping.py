@@ -156,7 +156,7 @@ def main():
     parser.add_argument('-n', '--num_requests', type=int, default=4, help="Number of requests to send in client mode (default: 4)")
     parser.add_argument('-w', '--timeout', type=int, default=1, help="Timeout between requests in client mode (default: 1 second)")
     parser.add_argument('-t', '--continuous', action='store_true', help="Send requests continuously until stopped")
-    parser.add_argument('-S', '--srcaddr', action='store_true', help="Source address to use for the client")
+    parser.add_argument('-S', '--srcaddr', metavar='src_address', help="Source address to use for the client")
     
     args = parser.parse_args()
 
