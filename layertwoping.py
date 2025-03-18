@@ -1,4 +1,4 @@
-from scapy.all import Ether, sendp, sniff, get_if_hwaddr, get_if_list
+from scapy.all import Ether, sendp, sniff, get_if_hwaddr, get_if_list, mac2str
 from datetime import datetime
 import time
 import os
