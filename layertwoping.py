@@ -1,4 +1,4 @@
-from scapy.all import Ether, sendp, sniff, get_if_hwaddr, get_if_list, mac2str
+from scapy.all import Ether, sendp, sniff, get_if_hwaddr, get_if_list, hexdump
 from datetime import datetime
 import time
 import os
@@ -18,8 +18,12 @@ def client(target_mac, interface, num_requests=4, timeout=1, continuous=False, s
     if not srcaddr:
         srcaddr = get_if_hwaddr(interface)
     print(f"Source address: {srcaddr}")
-    #else:
-        #srcaddr = mac2str(srcaddr)
+    else:
+        # Ensure srcaddr is in the correct format
+        srcaddr = srcaddr.lower()
+        if len(srcaddr.split(':')) != 6:
+            print(f"Invalid MAC address format: {srcaddr}")
+            sys.exit(1)
 
     def process_packet(packet):
         nonlocal received_responses
@@ -72,13 +76,15 @@ def client(target_mac, interface, num_requests=4, timeout=1, continuous=False, s
             payload = payload.ljust(FIXED_PAYLOAD_LENGTH, b'\x00')
             packet = Ether(dst=target_mac, src=srcaddr, type=0x9000) / payload
             start_time = datetime.now()
-            sendp(packet, iface=interface, verbose=False)
+            #hexdump(packet)  # Display the packet contents
+            sendp(packet, iface=interface, verbose=True)
+            #print(f"Sent packet from {srcaddr} to {target_mac}")
             sent_packets += 1
             
             # Sniff for response packets
             sniff(iface=interface, prn=process_packet, filter="ether proto 0x9000", timeout=timeout, store=False)
             time.sleep(1)
-            print(f"Sent packet from {srcaddr} to {target_mac}")
+            
         
         print(f"\nSent packets: {sent_packets}")
         print(f"Received responses: {received_responses}")
