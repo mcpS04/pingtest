@@ -8,7 +8,7 @@ import argparse  # Add argparse for argument parsing
 FIXED_PAYLOAD_LENGTH = 50  # Define the fixed payload length
 RESPONSE_DELAY = 0.05  # Define the response delay in seconds
 
-def client(target_mac, interface, num_requests=4, timeout=1):
+def client(target_mac, interface, num_requests=4, timeout=1, continuous=False):
     """Send Ethernet frames using the Ethernet Configuration Testing Protocol (ECTP) to a specific MAC address and print received answers."""
     print(f"Sending ECTP packets to {target_mac} on interface {interface}. Press Ctrl+C to stop.")
     
@@ -21,8 +21,9 @@ def client(target_mac, interface, num_requests=4, timeout=1):
         if Ether in packet and packet.type == 0x9000:  # Check for ECTP packets
             # Strip trailing zeros from the payload
             payload = packet.load.rstrip(b'\x00')
+            loop_function_0 = payload[2:4]
             # Check if the packet is a response packet
-            if payload[15:] != b"ECTP response":
+            if loop_function_0 != b'\x01\x00':
                 return
         
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -30,7 +31,6 @@ def client(target_mac, interface, num_requests=4, timeout=1):
         
             # Extract custom fields from the response
             loop_skipcnt = payload[0:2]
-            loop_function_0 = payload[2:4]
             loop_forward_mac = payload[4:11]
             loop_function_1 = payload[11:13]
             loop_receipt_num = payload[13:15]
@@ -48,12 +48,12 @@ def client(target_mac, interface, num_requests=4, timeout=1):
             print(f"  Payload: {payload[15:].decode('utf-8')}")
 
     try:
-        for _ in range(num_requests):
+        while continuous or sent_packets < num_requests:
             # Define custom fields
             loop_skipcnt = b'\x00\x00'  # Skip count
             loop_function_0 = b'\x02\x00'  # Function 0
             loop_forward_mac = b'\x00\x11\x22\x33\x44\x55'  # Forward MAC address
-            loop_function_1 = b'\x00\x00'  # Function 1
+            loop_function_1 = b'\x01\x00'  # Function 1
             #loop_receipt_num = b'\x00\x00'  # Receipt number
 
             # Construct an ECTP packet with custom fields
@@ -98,8 +98,8 @@ def server(interface):
             loop_function_1 = payload[11:13]
             #loop_receipt_num = payload[13:15]
             
-            # Check if the packet is a response packet to avoid infinite loop
-            if payload[15:] != b"ECTP ping":
+            # Check if the packet is a forwarding message to avoid infinite loop
+            if loop_function_0 != b'\x02\x00':
                 return
             
             print(f"[{timestamp}] ECTP packet received from {src_mac}")
@@ -110,7 +110,7 @@ def server(interface):
             #print(f"  Loop Receipt Number: {int.from_bytes(loop_receipt_num, 'big')}")
             
             # Construct and send a response packet
-            loop_skipcnt = b'\x01\x00'  # Skip count
+            loop_skipcnt = b'\x08\x00'  # Skip count
             loop_function_0 = b'\x01\x00'  # Function 0
             #loop_forward_mac = b'\x00\x01\x22\x33\x44\x55'  # Forward MAC address
             #loop_function_1 = b'\x00\x00'  # Function 1
@@ -153,6 +153,7 @@ def main():
     parser.add_argument('-c', '--client', metavar='TARGET_MAC', help="Start in client mode and specify target MAC address")
     parser.add_argument('-n', '--num_requests', type=int, default=4, help="Number of requests to send in client mode (default: 4)")
     parser.add_argument('-w', '--timeout', type=int, default=1, help="Timeout between requests in client mode (default: 1 second)")
+    parser.add_argument('-t', '--continuous', action='store_true', help="Send requests continuously until stopped")
     
     args = parser.parse_args()
 
@@ -165,7 +166,7 @@ def main():
     if args.server:
         server(interface)
     elif args.client:
-        client(args.client, interface, num_requests=args.num_requests, timeout=args.timeout)
+        client(args.client, interface, num_requests=args.num_requests, timeout=args.timeout, continuous=args.continuous)
 
 if __name__ == "__main__":
     if os.geteuid() != 0:
