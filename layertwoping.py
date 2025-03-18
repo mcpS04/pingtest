@@ -17,8 +17,9 @@ def client(target_mac, interface, num_requests=4, timeout=1, continuous=False, s
     round_trip_times = []
     if not srcaddr:
         srcaddr = get_if_hwaddr(interface)
-    else:
-        srcaddr = mac2str(srcaddr)
+    print(f"Source address: {srcaddr}")
+    #else:
+        #srcaddr = mac2str(srcaddr)
 
     def process_packet(packet):
         nonlocal received_responses
