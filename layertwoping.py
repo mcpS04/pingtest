@@ -8,13 +8,15 @@ import argparse  # Add argparse for argument parsing
 FIXED_PAYLOAD_LENGTH = 50  # Define the fixed payload length
 RESPONSE_DELAY = 0.05  # Define the response delay in seconds
 
-def client(target_mac, interface, num_requests=4, timeout=1, continuous=False, srcaddr=get_if_hwaddr(interface)):
+def client(target_mac, interface, num_requests=4, timeout=1, continuous=False, srcaddr=False):
     """Send Ethernet frames using the Ethernet Configuration Testing Protocol (ECTP) to a specific MAC address and print received answers."""
     print(f"Sending ECTP packets to {target_mac} on interface {interface}. Press Ctrl+C to stop.")
     
     sent_packets = 0
     received_responses = 0
     round_trip_times = []
+    if not srcaddr:
+        srcaddr = get_if_hwaddr(interface)
 
     def process_packet(packet):
         nonlocal received_responses
@@ -163,6 +165,7 @@ def main():
         sys.exit(1)
 
     interface = choose_interface()
+
 
     if args.server:
         server(interface)
