@@ -8,7 +8,7 @@ import argparse  # Add argparse for argument parsing
 FIXED_PAYLOAD_LENGTH = 50  # Define the fixed payload length
 RESPONSE_DELAY = 0.05  # Define the response delay in seconds
 
-def client(target_mac, interface, num_requests=4, timeout=1, continuous=False):
+def client(target_mac, interface, num_requests=4, timeout=1, continuous=False, srcaddr=get_if_hwaddr(interface)):
     """Send Ethernet frames using the Ethernet Configuration Testing Protocol (ECTP) to a specific MAC address and print received answers."""
     print(f"Sending ECTP packets to {target_mac} on interface {interface}. Press Ctrl+C to stop.")
     
@@ -65,7 +65,7 @@ def client(target_mac, interface, num_requests=4, timeout=1, continuous=False):
                        b"ECTP ping")
             # Pad the payload to the fixed length
             payload = payload.ljust(FIXED_PAYLOAD_LENGTH, b'\x00')
-            packet = Ether(dst=target_mac, src=get_if_hwaddr(interface), type=0x9000) / payload
+            packet = Ether(dst=target_mac, src=srcaddr, type=0x9000) / payload
             start_time = datetime.now()
             sendp(packet, iface=interface, verbose=False)
             sent_packets += 1
@@ -154,6 +154,7 @@ def main():
     parser.add_argument('-n', '--num_requests', type=int, default=4, help="Number of requests to send in client mode (default: 4)")
     parser.add_argument('-w', '--timeout', type=int, default=1, help="Timeout between requests in client mode (default: 1 second)")
     parser.add_argument('-t', '--continuous', action='store_true', help="Send requests continuously until stopped")
+    parser.add_argument('-S', '--srcaddr', action='store_true', help="Source address to use for the client")
     
     args = parser.parse_args()
 
@@ -166,7 +167,7 @@ def main():
     if args.server:
         server(interface)
     elif args.client:
-        client(args.client, interface, num_requests=args.num_requests, timeout=args.timeout, continuous=args.continuous)
+        client(args.client, interface, num_requests=args.num_requests, timeout=args.timeout, continuous=args.continuous, srcaddr=args.srcaddr)
 
 if __name__ == "__main__":
     if os.geteuid() != 0:
