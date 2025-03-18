@@ -78,6 +78,7 @@ def client(target_mac, interface, num_requests=4, timeout=1, continuous=False, s
             # Sniff for response packets
             sniff(iface=interface, prn=process_packet, filter="ether proto 0x9000", timeout=timeout, store=False)
             time.sleep(1)
+            print(f"Sent packet from {srcaddr} to {target_mac}")
         
         print(f"\nSent packets: {sent_packets}")
         print(f"Received responses: {received_responses}")
